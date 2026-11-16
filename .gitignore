@@ -1,0 +1,6 @@
+# local runtime files
+api_key.txt
+last_study.txt
+log.txt
+__pycache__/
+*.pyc
