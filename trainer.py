@@ -361,12 +361,12 @@ class App:
         row = tk.Frame(box)
         row.pack(fill='x')
         self.speed = tk.IntVar(value=8)
+        self.speed_lbl = tk.Label(row, text='1.5×', width=5, font=('Consolas', 11, 'bold'))
         self.slider = ttk.Scale(row, from_=1, to=16, orient='horizontal',
                                 command=self._on_slide)
-        self.slider.set(1.5)
         self.slider.pack(side='left', fill='x', expand=True)
-        self.speed_lbl = tk.Label(row, text='1.5×', width=5, font=('Consolas', 11, 'bold'))
         self.speed_lbl.pack(side='left')
+        self.slider.set(1.5)
 
         btns = tk.Frame(root)
         btns.pack(fill='x', padx=18, pady=4)
@@ -542,7 +542,9 @@ class App:
     def _on_slide(self, _=None):
         raw = float(self.slider.get())
         val = round(raw * 4) / 4.0
-        self.speed_lbl.config(text=('%g×' % val))
+        lbl = getattr(self, 'speed_lbl', None)
+        if lbl is not None:
+            lbl.config(text=('%g×' % val))
         if self.ready and val != getattr(self, '_sent_speed', None):
             self._sent_speed = val
             sp, rate, full = self._split(val)
@@ -1057,4 +1059,13 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception:
+        import traceback
+        try:
+            with open(os.path.join(APP_DIR, 'crash.log'), 'a', encoding='utf-8') as _f:
+                _f.write(time.strftime('%Y-%m-%d %H:%M:%S  ') + traceback.format_exc() + '\n')
+        except Exception:
+            pass
+        raise
