@@ -884,6 +884,7 @@ class App:
     def _quiz_step(self, c):
         """弹题处下一步：真实鼠标点选项 / 点关闭。"""
         try:
+            self._front(c)
             raw = c.js('__ZS.quizStep ? __ZS.quizStep() : "null"')
             if not raw or raw == 'null':
                 self._quiz_null = getattr(self, '_quiz_null', 0) + 1
@@ -908,10 +909,19 @@ class App:
         except Exception as e:
             self.log('弹题点击失败：%s' % str(e)[:50])
 
+    def _front(self, c):
+        """把目标标签页切到前台——连点器点的是屏幕坐标，标签页在后台就点到别的页面上。"""
+        try:
+            c.call('Page.bringToFront')
+            time.sleep(0.25)
+        except Exception:
+            pass
+
     def _click_current(self, c):
         """本节没满 100% 但已经播到片尾：用真实鼠标点一下「当前课时」重播。
         不用 currentTime=0 回绕（合成 seek 会被判异常踢回首页）。"""
         try:
+            self._front(c)
             if not os_focus_edge():
                 return
             time.sleep(0.25)
@@ -932,6 +942,7 @@ class App:
         1. 播放器控制条只在「真实 mousemove」后显示 3 秒左右，所以先晃一下鼠标；
         2. 坐标只有控件可见时才有尺寸，必须晃完立刻读、立刻点。"""
         try:
+            self._front(c)
             if not os_focus_edge():
                 self.log('没找到 Edge 窗口，跳过设倍速')
                 return
