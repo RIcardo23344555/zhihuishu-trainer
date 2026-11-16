@@ -1,6 +1,6 @@
 /* 智慧树加速器 —— 页面注入脚本（由修改器通过 CDP 注入，无需扩展）v2 */
 (function () {
-  if (window.__ZS && window.__ZS.__v === 21 && window.__ZS.inited) { try { window.__ZS.boot(); } catch (e) { } return; }
+  if (window.__ZS && window.__ZS.__v === 22 && window.__ZS.inited) { try { window.__ZS.boot(); } catch (e) { } return; }
   if (window.__ZS && window.__ZS.__stop) { try { window.__ZS.__stop(); } catch (e) { } }
 
   const DEF = { speed: 1, on: true, mute: true, next: true, quiz: true, hud: false, chunk: 200,
@@ -109,16 +109,23 @@
     }
     return row;
   }
+  /* 选项图标：单选 #iconxuan（未选）/#iconxuanzhong（选中）
+     多选 #iconfuxuan（未选）/#iconfuxuanzhong（选中）—— 判「选中」只能认 zhong，
+     否则多选项全被当成已选，会立刻点关闭 → 平台弹「未做答」→ 死循环 */
+  function iconHref(row) {
+    const use = row.querySelector('svg use');
+    return use ? (use.getAttribute('xlink:href') || use.getAttribute('href') || '') : '';
+  }
+  function rowSelected(r) {
+    const i = r.querySelector('input');
+    if (i && i.checked) return true;
+    const href = iconHref(r);
+    if (href) return /zhong/.test(href);
+    const cls = (typeof r.className === 'string' ? r.className : '');
+    return /active|selected|checked|cur/i.test(cls);
+  }
   function selectedRow(rows) {
-    return rows.find(r => {
-      const i = r.querySelector('input');
-      if (i && i.checked) return true;
-      const cls = (typeof r.className === 'string' ? r.className : '');
-      if (/active|selected|checked|cur/i.test(cls)) return true;
-      const use = r.querySelector('svg use');
-      const href = use && (use.getAttribute('xlink:href') || use.getAttribute('href') || '');
-      return !!href && href !== '#iconxuan';
-    });
+    return rows.find(rowSelected);
   }
   /* 弹题下一步该点哪儿：只有 DOM 里真的出现「选中态」才允许点关闭，
      否则平台会弹「未做答的弹题不能关闭」把流程卡住。 */
@@ -144,8 +151,12 @@
     if (!sel) {
       if (st.quizPicked && now - st.quizPickAt < 1600) return 'null';  // 刚点过，等选中态出来
       const ans = pickAnswer(textOf(d));
-      let row = ans ? rows.find(r => textOf(r).includes(ans)) : null;
-      if (!row) row = rows[0];
+      /* 只点「还没选中」的行：多选点已选中的行会把它取消掉 */
+      const cands = rows.filter(r => !rowSelected(r));
+      if (!cands.length) return 'null';
+      let row = ans ? cands.find(r => textOf(r).includes(ans)) : null;
+      if (!row) row = cands[(st.quizPickIdx || 0) % cands.length];   // 点多没反应就换一个
+      st.quizPickIdx = (st.quizPickIdx || 0) + 1;
       st.quizPicked = true; st.quizPickAt = now;
       return cxy(radioOf(row), 'pick', row);
     }
@@ -402,7 +413,7 @@
   /* ---------- 对外接口 ---------- */
   window.__ZS = {
     inited: true,
-    __v: 21,
+    __v: 22,
     __stop() {
       if (timer) { clearInterval(timer); timer = null; }
       if (quizTimer) { clearInterval(quizTimer); quizTimer = null; }
